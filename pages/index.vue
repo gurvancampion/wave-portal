@@ -2,33 +2,82 @@
   <div class="container">
     <div>
       <Logo />
-      <div class="text-5xl text-gray-800 dark:text-white text my-2">
-        👋 Hey there!
-      </div>
-      <div class="dark:text-white my-4">
+
+      <div class="text-5xl my-2">👋 Hey there!</div>
+      <div class="my-4">
         I'm Gurvan currently following the Solidity + Ethereum Smart Contracts
         course at buildspace.so. Connect your Ethereum wallet and wave at me!
       </div>
+
       <button
         v-if="!currAccount"
-        class="btn btn-wide btn-large"
+        class="btn btn-primary btn-outline btn-wide btn-large"
         @click="connectWallet"
       >
         Connect Wallet
       </button>
+
       <button
         v-if="currAccount"
-        :class="[
-          'btn btn-wide btn-large',
-          {
-            loading: isWaving,
-          },
-        ]"
-        @click="wave"
+        class="btn btn-primary btn-wide btn-large"
+        @click="displayDialog = true"
       >
-        {{ isWaving ? '' : 'Wave at Me' }}
+        Wave at me
       </button>
-      <div class="dark:text-white mt-3">Total waves: {{ wavesCount }}</div>
+
+      <div class="mt-3">Total waves: {{ waves.length }}</div>
+
+      <div v-if="waves.length > 0" class="overflow-x-auto mt-3">
+        <table class="table w-full">
+          <thead>
+            <tr>
+              <th>Address</th>
+              <th>Datetime</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(wave, index) in waves" :key="index">
+              <th class="!bg-transparent">{{ wave.address }}</th>
+              <th class="!bg-transparent">{{ wave.timestamp }}</th>
+              <th class="!bg-transparent">{{ wave.message }}</th>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div
+        v-if="displayDialog"
+        :class="['modal', { 'modal-open	': displayDialog }]"
+      >
+        <div class="modal-box">
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">Your message:</span>
+            </label>
+            <textarea
+              v-model="message"
+              class="textarea textarea-bordered h-24"
+              placeholder="Write your message!"
+            />
+          </div>
+
+          <div class="modal-action">
+            <button
+              :class="[
+                'btn btn-primary',
+                {
+                  loading: isWaving,
+                },
+              ]"
+              @click="wave"
+            >
+              Send
+            </button>
+            <button class="btn" @click="displayDialog = false">Close</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -43,9 +92,10 @@ import WavePortal from '@/contracts/WavePortal.json'
 const { $config } = useContext()
 
 const currAccount = ref('')
-const wavesCount = ref(0)
 const isWaving = ref(false)
-
+const displayDialog = ref(false)
+const message = ref('')
+const waves = ref([])
 let wavePortalContract = reactive({})
 
 const isWalletConnected = async () => {
@@ -78,24 +128,33 @@ const setWavePortalContract = () => {
 }
 
 const wave = async () => {
-  const waveTxn = await wavePortalContract.wave()
+  const waveTxn = await wavePortalContract.wave(message.value)
   isWaving.value = true
   await waveTxn.wait()
   isWaving.value = false
-  await getTotalWaves()
+  await getAllWaves()
   confetti()
+  displayDialog.value = false
+  message.value = ''
 }
 
-const getTotalWaves = async () => {
-  const count = await wavePortalContract.getTotalWaves()
-  wavesCount.value = Number(count)
+const getAllWaves = async () => {
+  waves.value = (await wavePortalContract.getAllWaves())
+    .map((wave) => {
+      return {
+        address: wave[0],
+        timestamp: new Date(wave.timestamp * 1000).toLocaleString(),
+        message: wave.message,
+      }
+    })
+    .reverse()
 }
 
 onMounted(async () => {
   try {
     await isWalletConnected()
     await setWavePortalContract()
-    await getTotalWaves()
+    await getAllWaves()
   } catch {}
 })
 </script>
