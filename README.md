@@ -1,5 +1,8 @@
 # waveportal
 
+Solidity + Ethereum Smart Contracts course at https://buildspace.so/
+Demo: https://wave-portal-gurvan-guss.vercel.app/
+
 ## Build Setup
 
 ```bash
