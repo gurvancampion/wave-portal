@@ -120,12 +120,15 @@ const message = ref('')
 const waves = ref([])
 let wavePortalContract = reactive({})
 
-const isWalletConnected = async () => {
+const setWallet = async () => {
   const { ethereum } = window
   // Check if we have access to an authorized account
   const accounts = await ethereum.request({ method: 'eth_accounts' })
 
-  if (accounts && accounts.length) currAccount.value = accounts[0]
+  if (accounts && accounts.length) {
+    currAccount.value = accounts[0]
+    await getAllWaves()
+  }
 }
 
 const connectWallet = async () => {
@@ -134,7 +137,10 @@ const connectWallet = async () => {
 
   const accounts = await ethereum.request({ method: 'eth_requestAccounts' })
 
-  if (accounts && accounts.length) currAccount.value = accounts[0]
+  if (accounts && accounts.length) {
+    currAccount.value = accounts[0]
+    await getAllWaves()
+  }
 }
 
 // eslint-disable-next-line no-unused-vars
@@ -159,16 +165,24 @@ const setWavePortalContract = () => {
   })
 }
 
-const wave = async () => {
-  const waveTxn = await wavePortalContract.wave(message.value, {
-    gasLimit: 300000,
-  })
-  isWaving.value = true
-  await waveTxn.wait()
-  isWaving.value = false
+const resetForm = () => {
   // Reset form
   displayDialog.value = false
   message.value = ''
+}
+
+const wave = async () => {
+  try {
+    const waveTxn = await wavePortalContract.wave(message.value, {
+      gasLimit: 300000,
+    })
+    isWaving.value = true
+    await waveTxn.wait()
+    isWaving.value = false
+    resetForm()
+  } catch {
+    isWaving.value = false
+  }
 }
 
 const getAllWaves = async () => {
@@ -186,9 +200,8 @@ const getAllWaves = async () => {
 
 onMounted(async () => {
   try {
-    await isWalletConnected()
+    await setWallet()
     await setWavePortalContract()
-    await getAllWaves()
   } catch {}
 })
 </script>
