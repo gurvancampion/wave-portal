@@ -125,10 +125,7 @@ const setWallet = async () => {
   // Check if we have access to an authorized account
   const accounts = await ethereum.request({ method: 'eth_accounts' })
 
-  if (accounts && accounts.length) {
-    currAccount.value = accounts[0]
-    await getAllWaves()
-  }
+  if (accounts && accounts.length) currAccount.value = accounts[0]
 }
 
 const connectWallet = async () => {
@@ -139,6 +136,7 @@ const connectWallet = async () => {
 
   if (accounts && accounts.length) {
     currAccount.value = accounts[0]
+    await setWavePortalContract()
     await getAllWaves()
   }
 }
@@ -202,6 +200,7 @@ onMounted(async () => {
   try {
     await setWallet()
     await setWavePortalContract()
+    await getAllWaves()
   } catch {}
 })
 </script>
