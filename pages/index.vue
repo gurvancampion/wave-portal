@@ -1,17 +1,25 @@
 <template>
   <div class="container">
     <div>
-      <Logo />
-
       <div class="text-5xl my-2">👋 Hey there!</div>
       <div class="my-4">
-        I'm Gurvan currently following the Solidity + Ethereum Smart Contracts
-        course at buildspace.so. Connect your Ethereum wallet and wave at me!
+        <p>
+          I'm Gurvan, currently following the Solidity + Ethereum Smart
+          Contracts course at
+          <a class="link-primary" href="https://buildspace.so/" target="_blank">
+            buildspace.so
+          </a>
+        </p>
+        <p>
+          Connect your Ethereum wallet via Metamask (Use Rinkeby Network) and
+          wave at me!
+        </p>
+        <p>PS: Get a chance to win some ETH 😉</p>
       </div>
 
       <button
         v-if="!currAccount"
-        class="btn btn-primary btn-outline btn-wide btn-large"
+        class="btn btn-primary btn-wide btn-large"
         @click="connectWallet"
       >
         Connect Wallet
@@ -32,15 +40,19 @@
           <thead>
             <tr>
               <th>Address</th>
-              <th>Datetime</th>
               <th>Message</th>
+              <th>Won prize</th>
+              <th>Datetime</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(wave, index) in waves" :key="index">
-              <th class="!bg-transparent">{{ wave.address }}</th>
-              <th class="!bg-transparent">{{ wave.timestamp }}</th>
-              <th class="!bg-transparent">{{ wave.message }}</th>
+            <tr v-for="(w, index) in waves" :key="index">
+              <th class="!bg-transparent">{{ w.address }}</th>
+              <th class="!bg-transparent">{{ w.message }}</th>
+              <th class="!bg-transparent">
+                {{ w.wonPrize ? '🎉' : '❌' }}
+              </th>
+              <th class="!bg-transparent">{{ w.timestamp }}</th>
             </tr>
           </tbody>
         </table>
@@ -74,7 +86,17 @@
             >
               Send
             </button>
-            <button class="btn" @click="displayDialog = false">Close</button>
+            <button
+              :class="[
+                'btn',
+                {
+                  'btn-disabled': isWaving,
+                },
+              ]"
+              @click="displayDialog = false"
+            >
+              Close
+            </button>
           </div>
         </div>
       </div>
@@ -125,15 +147,26 @@ const setWavePortalContract = () => {
     contractABI,
     signer
   )
+
+  wavePortalContract.on('NewWave', (from, message, wonPrize, timestamp) => {
+    waves.value.unshift({
+      address: from,
+      message,
+      wonPrize,
+      timestamp: new Date(timestamp * 1000).toLocaleString(),
+    })
+    if (wonPrize) confetti()
+  })
 }
 
 const wave = async () => {
-  const waveTxn = await wavePortalContract.wave(message.value)
+  const waveTxn = await wavePortalContract.wave(message.value, {
+    gasLimit: 300000,
+  })
   isWaving.value = true
   await waveTxn.wait()
   isWaving.value = false
-  await getAllWaves()
-  confetti()
+  // Reset form
   displayDialog.value = false
   message.value = ''
 }
@@ -142,9 +175,10 @@ const getAllWaves = async () => {
   waves.value = (await wavePortalContract.getAllWaves())
     .map((wave) => {
       return {
-        address: wave[0],
-        timestamp: new Date(wave.timestamp * 1000).toLocaleString(),
+        address: wave.waver,
         message: wave.message,
+        wonPrize: wave.wonPrize,
+        timestamp: new Date(wave.timestamp * 1000).toLocaleString(),
       }
     })
     .reverse()
